@@ -92,38 +92,38 @@ public class TempBlobTest {
     TempBlob tempBlob = new TempBlob();
     writeToBlob(expected, tempBlob);
 
-    assertThat(tempBlob.inMemory).isTrue();
+    assertThat(tempBlob.isInMemory()).isTrue();
     assertThat(toByteArray(tempBlob)).isEqualTo(expected);
   }
 
   @Test
   public void testWriteToDisk() throws Exception {
-    byte[] data = new byte[TempBlob.MAX_SIZE_IN_MEMORY_BYTES + 1];
-    new Random().nextBytes(data);
     TempBlob tempBlob = new TempBlob();
+    byte[] data = new byte[tempBlob.maxSizeInMemoryBytes + 1];
+    new Random().nextBytes(data);
     writeToBlob(data, tempBlob);
 
-    assertThat(tempBlob.inMemory).isFalse();
+    assertThat(tempBlob.isInMemory()).isFalse();
     assertThat(toByteArray(tempBlob)).isEqualTo(data);
   }
 
   @Test
   public void testResetToInMemoryOnClear() throws Exception {
-    byte[] data = new byte[TempBlob.MAX_SIZE_IN_MEMORY_BYTES + 2];
-    new Random().nextBytes(data);
     TempBlob tempBlob = new TempBlob();
+    byte[] data = new byte[tempBlob.maxSizeInMemoryBytes + 1];
+    new Random().nextBytes(data);
     writeToBlob(data, tempBlob);
 
     // Verify that we switched from inMemory to onDisk.
-    assertThat(tempBlob.inMemory).isFalse();
+    assertThat(tempBlob.isInMemory()).isFalse();
 
-    // Clear and write again with size < TempBlob.MAX_SIZE_IN_MEMORY_BYTES.
+    // Clear and write again with size < TempBlob.maxSizeInMemoryBytes.
     byte[] expected = new byte[] {2, 4, 0, 8};
     tempBlob.clear();
     writeToBlob(expected, tempBlob);
 
     // Verify that we are back from onDisk to inMemory.
-    assertThat(tempBlob.inMemory).isTrue();
+    assertThat(tempBlob.isInMemory()).isTrue();
     assertThat(toByteArray(tempBlob)).isEqualTo(expected);
   }
 

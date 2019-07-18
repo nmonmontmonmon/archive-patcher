@@ -141,6 +141,15 @@ public class FileByFileDeltaGenerator extends DeltaGenerator {
     }
   }
 
+  public PreDiffPlan generatePreDiffPlanAndPrepareBlobs(ByteSource oldBlob, ByteSource newBlob)
+      throws IOException {
+    try (TempBlob deltaFriendlyOldFile = new TempBlob();
+        TempBlob deltaFriendlyNewFile = new TempBlob()) {
+      return generatePreDiffPlanAndPrepareBlobs(
+          oldBlob, newBlob, deltaFriendlyOldFile, deltaFriendlyNewFile, supportedDeltaFormats);
+    }
+  }
+
   private PreDiffPlan generatePreDiffPlanAndPrepareBlobs(
       ByteSource oldFile,
       ByteSource newFile,
