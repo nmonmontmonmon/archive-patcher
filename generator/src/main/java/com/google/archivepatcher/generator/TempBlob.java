@@ -26,17 +26,15 @@ import java.io.OutputStream;
 /**
  * A closeable container for a temp blob that deletes itself on {@link #close()}. This is convenient
  * for try-with-resources constructs that need to use temp files in scope. The blob is moved to disk
- * from memory when it exceeds {@code MAX_SIZE_IN_MEMORY_BYTES} in size.
+ * from memory when it exceeds {@code maxSizeInMemoryBytes} in size.
  */
 public class TempBlob implements Closeable {
   /** The file that is wrapped by this blob. */
   private File file;
 
-  static final int MAX_SIZE_IN_MEMORY_BYTES = 5 * 1024 * 1024;
-
-  static final long BITS_IN_BYTE = 8;
-
-  boolean inMemory = true;
+  int maxSizeInMemoryBytes = 5 * 1024 * 1024;
+  private static final long BITS_IN_BYTE = 8;
+  private boolean inMemory = true;
 
   private ByteArrayOutputStream byteArrayOutputStream;
   private BufferedOutputStream bufferedFileOutputStream;
@@ -56,6 +54,10 @@ public class TempBlob implements Closeable {
     byteArrayOutputStream = new ByteArrayOutputStream();
   }
 
+  public TempBlob(int maxSizeInMemoryBytes) {
+    this.maxSizeInMemoryBytes = maxSizeInMemoryBytes;
+  }
+
   /** Obtain the content of this blob as {@link ByteSource}. */
   public ByteSource asByteSource() throws IOException {
     throwIOExceptionIfClosed();
@@ -63,6 +65,31 @@ public class TempBlob implements Closeable {
     return inMemory
         ? ByteSource.wrap(byteArrayOutputStream.toByteArray())
         : ByteSource.fromFile(file);
+  }
+
+  /** Returns the {@code File} object if the blob is stored on disk. */
+  public File getFile() throws IOException {
+    throwIOExceptionIfClosed();
+    throwIOExceptionIfWriting();
+    if (inMemory) {
+      throw new IOException("File absent. Blob is small enough to be stored in-memory.");
+    }
+    return file;
+  }
+
+  /** Returns the {@code File} object if the blob is stored in memory. */
+  public byte[] getByteArray() throws IOException {
+    throwIOExceptionIfClosed();
+    throwIOExceptionIfWriting();
+    if (!inMemory) {
+      throw new IOException("Blob is stored on disk due to large size.");
+    }
+    return byteArrayOutputStream.toByteArray();
+  }
+
+  /** If the blob is stored in memory or on disk. */
+  public boolean isInMemory() {
+    return inMemory;
   }
 
   /** Returns a buffered {@link OutputStream} to write to this blob. */
@@ -103,7 +130,7 @@ public class TempBlob implements Closeable {
 
       private void copyToDiskIfRequired(long bytesToBeWritten) throws IOException {
         if (inMemory
-            && byteArrayOutputStream.size() + bytesToBeWritten > MAX_SIZE_IN_MEMORY_BYTES) {
+            && byteArrayOutputStream.size() + bytesToBeWritten > maxSizeInMemoryBytes) {
           createNewFile();
           bufferedFileOutputStream = new BufferedOutputStream(new FileOutputStream(file));
           byteArrayOutputStream.writeTo(bufferedFileOutputStream);
